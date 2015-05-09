@@ -83,7 +83,7 @@ course to make more extensive modifications for further customization.
 .\php\secrets.php
 -----------------
 
-* set "GOOGLE_CALENDAR_API_KEY" to a valid Google Calendar API key (used )for
+* set "GOOGLE_CALENDAR_API_KEY" to a valid Google Calendar API key (used for
   calling the Google Calendar API)
 * set your ArcGIS API keys, specifically "BBBS_ARCGIS_API_CLIENT_ID" and
   "BBBS_ARCGIS_API_CLIENT_SECRET", to valid values. This will require you to
