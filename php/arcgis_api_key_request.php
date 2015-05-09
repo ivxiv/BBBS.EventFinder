@@ -34,7 +34,6 @@ define("ARCGIS_API_ACCESS_TOKEN_KEY",		"access_token");
 
 // returns ArcGIS API token in JSON format
 // https://www.arcgis.com/sharing/oauth2/token?client_id=<YOUR CLIENT ID>&grant_type=client_credentials&client_secret=<YOUR CLIENT SECRET>&f=json
-// $TODO might want to add authentication here at some point, so that not just anyone can use our API token
 function generate_arcgis_api_token()
 {
 	$body_result= NULL;
