@@ -1,0 +1,1692 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--
+bbbs_event_finder.html
+Saturday August 30, 2014 11:50am Stefan S.
+
+-->
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml">
+<head profile= "http://www.w3.org/2005/10/profile">
+<title>BBBS of Central TX Match Event Finder</title>
+<meta http-equiv= "Content-Type" content= "text/html; charset=utf-8" />
+<meta name= "viewport" content= "initial-scale= 1, maximum-scale= 1, user-scalable= no" />
+<meta property="og:image" content="http://bbbsevents.org/images/bbbs_logo.jpg" />
+<meta property="og:image:secure_url" content="https://bbbsevents.org/images/bbbs_logo.jpg" />
+<link rel= "icon" type= "image/png" href= "./images/bbbs_fav_icon.png" />
+<link rel= "apple-touch-icon" href= "./apple-touch-icon.png" />
+<link rel= "apple-touch-icon-precomposed" href= "./apple-touch-icon.png" />
+<link rel= "stylesheet" href= "http://js.arcgis.com/3.10/js/esri/css/esri.css" />
+<link rel= "stylesheet" href= "http://js.arcgis.com/3.10/js/dojo/dijit/themes/claro/claro.css" />
+<style type= "text/css">
+<!--
+	html *
+	{
+		font-size: 14px !important;
+		color: #000000 !important;
+		font-family: Arial !important;
+	}
+	html, body
+	{
+		padding: 0;
+		margin: 0;
+		height: 100%;
+	}
+	header
+	{
+		width: 100%;
+		height: 40px;
+	}
+	header nav ul li
+	{
+		display: inline;
+		padding: 0 30px 0 0;
+		float: left;
+	}
+	#wrapper
+	{
+		min-height: 100%;
+		height: auto !important;
+		height: 100%;
+		margin: 0;
+		position: relative;
+	}
+	#map_content
+	{
+		width: 100%;
+		padding: 0;
+		position: absolute;
+		bottom: 30px;
+		top: 30px;
+	}
+	#map_search
+	{
+		display: block;
+		position: absolute;
+		z-index: 3;
+		bottom: 50px;
+		left: 75px;
+	}
+	footer
+	{
+		margin: -30px 0 0 0;
+		width: 100%;
+		height: 30px;
+		background-color: white;
+	}
+	.menu_icon
+	{
+		width: 32px;
+		height: 32px;
+		background-repeat: no-repeat;
+	}
+	.bbbs_icon_bw_32_image
+	{
+		background-image: url('images/bbbs_icon_bw_32.png');
+	}
+	.bbbs_icon_blue_32_image
+	{
+		background-image: url('images/bbbs_icon_blue_32.png');
+	}
+	.bbbs_icon_gold_32_image
+	{
+		background-image: url('images/bbbs_icon_gold_32.png');
+	}
+	.bbbs_icon_green_32_image
+	{
+		background-image: url('images/bbbs_icon_green_32.png');
+	}
+	.bbbs_icon_purple_32_image
+	{
+		background-image: url('images/bbbs_icon_purple_32.png');
+	}
+	.ffia_icon_32_image
+	{
+		background-image: url('images/ffia_icon_32.png');
+	}
+	.austin360_icon_32_image
+	{
+		background-image: url('images/austin360_icon_32.png');
+	}
+	.coa_icon_32_image
+	{
+		background-image: url('images/coa_icon_32.png');
+	}
+-->
+</style>
+
+<!-- ESRI ArcGIS -->
+<script type= "text/javascript" src= "http://js.arcgis.com/3.11/"></script>
+<!-- BBBS Event Finder -->
+<script type= "text/javascript">
+<!--
+/* ---------- constants */
+
+var k_months= [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ];
+var k_week_days= [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ];
+
+/* if these are modified, be sure to update show_submit_event_dialog() as well */
+var k_search_category=
+{
+	/* search all categories by default */
+	"Educational": true,
+	"Social": true,
+	"Outdoors": true,
+	"Entertainment": true,
+	"Food": true
+};
+var k_search_cost_array=
+[
+	true, /* free */
+	true, /* $ */
+	true, /* $$ */
+	true, /* $$$ */
+	true /* $$$$ */
+];
+var k_cost_labels_array=
+[
+	"Free",
+	"$		up to $5",
+	"$$		up to $10",
+	"$$$	up to $20",
+	"$$$$	over $20"
+];
+var k_search_age=
+{
+	/* don't filter by age by default */
+	"6-8": false,
+	"9-12": false,
+	"12-14": false,
+	"15-18": false
+};
+
+var k_arcgis_geocode_score_acceptance_threshold= 80;
+var k_initial_map_zoom_level= 5;
+var k_default_map_zoom_level= 12;
+var k_web_mercator_projection_spatial_reference_wkid= 102100;
+var k_use_web_mercator_projection= true;
+
+/* local deployment */
+var k_bbbs_event_load_url= "./php/google_calendar.php?calendar=bbbsctxcalendar@gmail.com";
+var k_bbbs_match_discount_partners_load_url= "./php/google_calendar.php?calendar=f6v7nd9kgvi7sjem6at9s0sva0@group.calendar.google.com";
+var k_bbbs_weekly_events_calendar_load_url= "./php/google_calendar.php?calendar=isgn70g673f4s60deonbn2ptso@group.calendar.google.com";
+var k_free_fun_in_austin_calendar_load_url= "./php/google_calendar.php?calendar=freenius@gmail.com";
+var k_family_friendly_sxsw_calendar_load_url= "./php/google_calendar.php?calendar=1lqapbmd7087tsfif7rksefigk@group.calendar.google.com";
+/* live deployment */
+/*
+var k_bbbs_event_load_url= "http://www.ivxiv.net/bbbs_events_v1.1/php/google_calendar.php?calendar=bbbsctxcalendar@gmail.com";
+var k_bbbs_match_discount_partners_load_url= "http://www.ivxiv.net/bbbs_events_v1.1/php/google_calendar.php?calendar=f6v7nd9kgvi7sjem6at9s0sva0@group.calendar.google.com";
+var k_bbbs_weekly_events_calendar_load_url= "http://www.ivxiv.net/bbbs_events_v1.1/php/google_calendar.php?calendar=isgn70g673f4s60deonbn2ptso@group.calendar.google.com";
+var k_free_fun_in_austin_calendar_load_url= "http://www.ivxiv.net/bbbs_events_v1.1/php/google_calendar.php?calendar=freenius@gmail.com";
+var k_family_friendly_sxsw_calendar_load_url= "http://www.ivxiv.net/bbbs_events_v1.1/php/google_calendar.php?calendar=1lqapbmd7087tsfif7rksefigk@group.calendar.google.com";
+*/
+
+/* the following are used to wrap up common behavior for all available event sources */
+
+function c_event_source(name, url, icon_class)
+{
+	this.m_name= name;
+	this.m_url= url;
+	this.m_icon_class= icon_class;
+	this.m_events_array_unfiltered= [];
+	this.m_events_array_filtered= [];
+	this.m_popup_menu= null;
+	this.m_menu= null;
+	this.get_load_url= function(start_date, end_date)
+	{
+		return this.m_url + "&start_date=" + start_date.toISOString() + "&end_date=" + end_date.toISOString();
+	}
+	
+	return;
+}
+
+var g_event_source_events_calendar= new c_event_source("BBBS Recurring Events", k_bbbs_event_load_url, "menu_icon bbbs_icon_purple_32_image");
+var g_event_source_match_discount_partners= new c_event_source("BBBS Match Discount Partners", k_bbbs_match_discount_partners_load_url, "menu_icon bbbs_icon_gold_32_image");
+var g_event_source_weekly_events_calendar= new c_event_source("BBBS Special Events", k_bbbs_weekly_events_calendar_load_url, "menu_icon bbbs_icon_green_32_image");
+var g_event_source_free_fun_in_austin_calendar= new c_event_source("Free Fun in Austin", k_free_fun_in_austin_calendar_load_url, "menu_icon ffia_icon_32_image");
+/*var g_event_source_family_friendly_sxsw_calendar= new c_event_source("Family Friendly SXSW", k_family_friendly_sxsw_calendar_load_url);*/
+var g_event_source_array=
+[
+	g_event_source_match_discount_partners,
+	g_event_source_weekly_events_calendar,
+	g_event_source_events_calendar,
+	g_event_source_free_fun_in_austin_calendar,
+	/*g_event_source_family_friendly_sxsw_calendar*/
+];
+
+/* ---------- globals */
+
+var g_bbbs_events_map= null;
+var g_geocoder= null;
+var g_map_graphics_layer= null;
+var g_user_location_graphic= null;
+var g_last_event_search_date= null;
+
+var g_event_results_menu= null;
+var g_popup_date_menu= null;
+var g_popup_dialog= null;
+
+var g_version_string= "<hr /><p>Comments / Questions? <a href= \"mailto:software@ivxiv.com\">Click here to email the developer</a>.</p><hr /><p><small>version 1.3.0 : 04.29.2015</small></p>";
+
+/* counter used to track # of active event searches, for purposes of triggering UI
+###stefan $NOTE also used as workaround for iOS calendar bug (double-selection on date) */
+var g_active_event_search_count= 0;
+
+/* ---------- utility */
+
+function object_to_string(something)
+{
+	return JSON.stringify(something, null, 4);
+}
+
+/* ---------- mapping */
+
+require(
+[
+	"esri/map",
+	"esri/dijit/Geocoder",
+	"esri/graphic",
+	"esri/geometry/Point",
+	"esri/layers/GraphicsLayer",
+	"esri/symbols/PictureMarkerSymbol",
+	"esri/symbols/SimpleMarkerSymbol",
+	"esri/symbols/SimpleLineSymbol",
+	"esri/geometry/Extent",
+	"esri/geometry/screenUtils",
+	"esri/SpatialReference",
+	"dojo/dom",
+	"dojo/date/locale",
+	"dojo/dom-construct",
+	"dojo/html",
+	"dojo/query",
+	"dojo/request",
+	"dojo/_base/Color",
+	"dijit/Dialog",
+	"dijit/Menu",
+	"dijit/MenuItem",
+	"dijit/MenuBar",
+	"dijit/MenuBarItem",
+	"dijit/MenuSeparator",
+	"dijit/PopupMenuItem",
+	"dijit/PopupMenuBarItem",
+	"dijit/CheckedMenuItem",
+	"dijit/DropDownMenu",
+	"dijit/Calendar",
+	"dojo/domReady!"
+],
+
+function(
+	Map,
+	Geocoder,
+	Graphic,
+	Point,
+	GraphicsLayer,
+	PictureMarkerSymbol,
+	SimpleMarkerSymbol,
+	SimpleLineSymbol,
+	Extent,
+	screenUtils,
+	SpatialReference,
+	dom,
+	locale,
+	domConstruct,
+	html,
+	query,
+	request,
+	Color,
+	Dialog,
+	Menu,
+	MenuItem,
+	MenuBar,
+	MenuBarItem,
+	MenuSeparator,
+	PopupMenuItem,
+	PopupMenuBarItem,
+	CheckedMenuItem,
+	DropDownMenu,
+	Calendar)
+{
+	/* ---------- utility */
+
+	function report_error(message)
+	{
+		console.log("###ERROR " + message);
+		set_status_text(message);
+		
+		return;
+	}
+
+	/* ---------- interface code */
+	
+	/* ---------- help menu */
+
+	function initialize_help_menu()
+	{
+		var help_menu= new DropDownMenu();
+		var external_links_menu= new Menu({ id: "external_event_links" });
+		
+		external_links_menu.addChild(
+			new MenuItem(
+				{
+					label: "Match Discount Partners",
+					iconClass: "menu_icon bbbs_icon_gold_32_image",
+					m_url: "./mdp/index.html",
+					onClick: function() { window.open(this.m_url, "_blank"); }
+				}
+			)
+		);
+		external_links_menu.addChild(
+			new MenuItem(
+				{
+					label: "150 Activity Ideas",
+					iconClass: "menu_icon bbbs_icon_bw_32_image",
+					m_url: "http://www.bigmentoring.org/site/c.bkLVKdOQLjK6E/b.9084633/k.7C2E/150_Activity_Ideas.htm",
+					onClick: function() { window.open(this.m_url, "_blank"); }
+				}
+			)
+		);
+		external_links_menu.addChild(
+			new MenuItem(
+				{
+					label: "Free Fun in Austin",
+					iconClass: "menu_icon ffia_icon_32_image",
+					m_url: "http://www.freefuninaustin.com/",
+					onClick: function() { window.open(this.m_url, "_blank"); }
+				}
+			)
+		);
+		external_links_menu.addChild(
+			new MenuItem(
+				{
+					label: "Austin360",
+					iconClass: "menu_icon austin360_icon_32_image",
+					m_url: "http://www.austin360.com/",
+					onClick: function() { window.open(this.m_url, "_blank"); }
+				}
+			)
+		);
+		external_links_menu.addChild(
+			new MenuItem(
+				{
+					label: "AustinTexas.org Events",
+					iconClass: "menu_icon coa_icon_32_image",
+					m_url: "http://www.austintexas.org/visit/events/",
+					onClick: function() { window.open(this.m_url, "_blank"); }
+				}
+			)
+		);
+		external_links_menu.startup();
+		
+		help_menu.addChild(
+			new MenuItem(
+				{
+					label: "About this App...",
+					iconClass: "menu_icon bbbs_icon_blue_32_image",
+					onClick: function() { show_about_dialog(); }
+				}
+			)
+		);
+		
+		help_menu.addChild(new MenuSeparator());
+		
+		help_menu.addChild(
+			new MenuItem(
+				{
+					label: "Match Discount Partners...",
+					iconClass: "menu_icon bbbs_icon_gold_32_image",
+					m_url: "./mdp/index.html",
+					onClick: function() { window.open(this.m_url, "_blank"); }
+				}
+			)
+		);
+		
+		help_menu.addChild(
+			new MenuItem(
+				{
+					label: "How-To Use this App...",
+					onClick: function() { show_help_dialog(); }
+				}
+			)
+		);
+		help_menu.addChild(
+			new MenuItem(
+				{
+					label: "Suggest an Event...",
+					onClick: function() { show_submit_event_dialog(); }
+				}
+			)
+		);
+		
+		help_menu.addChild(new MenuSeparator());
+		
+		help_menu.addChild(
+			new PopupMenuItem(
+				{
+					id: "more_events_popup",
+					label: "Even More Events",
+					popup: external_links_menu
+				}
+			)
+		);
+		
+		
+		help_menu.startup();
+		
+		return help_menu;
+	}
+	
+	function get_dialog_width() { return Math.min(Math.max(300, window.innerWidth * 0.75), 500); }
+	function get_dialog_height() { return Math.min(Math.max(300, window.innerHeight * 0.75), 500); }
+	function get_dialog_inner_width() { return get_dialog_width() - 25; }
+	function get_dialog_inner_height() { return get_dialog_height() - 50; }
+	
+	function show_dialog(title_string, html_content)
+	{
+		if (null == g_popup_dialog)
+		{
+			g_popup_dialog= new Dialog();
+		}
+		
+		g_popup_dialog.set("style", "width:" + get_dialog_width() + "px; height:" + get_dialog_height() + "px;");
+		g_popup_dialog.set("title", "<b>" + title_string + "</b>");
+		/* wrap content in a div tag to facilitate scrolling as appropriate */
+		g_popup_dialog.set("content", "<div style=\"width:" + get_dialog_inner_width() + "px; height:" + get_dialog_inner_height() + "px; overflow: auto;\">" + html_content + "</div>");
+		
+		g_popup_dialog.show();
+		
+		return;
+	}
+	
+	function show_welcome_dialog()
+	{
+		show_dialog("Welcome!",
+			"<center>" +
+			"<p><b>Welcome to the Big Brothers Big Sisters of Central Texas \"Event Finder\"!</b></p>" +
+			"<p><img src=\"./images/bbbs_ctexas.jpg\" align=\"center\" border=3></img></p>" +
+			"<p>To get started, use the menu bar's <b>Date</b> menu above to pick a day " +
+			"on which to search for events and opportunities with Match Discount Partners. " +
+			"The <b>Help</b> menu provides additional information.</p>" +
+			"<p>Click here to get started</p>" +
+			"<div dojoType= \"dijit.form.Button\" id=\"global_dialog_start_search_button\">Start</div></center>"
+		);
+		
+		var dialog_button= dojo.byId("global_dialog_start_search_button");
+		
+		if (null != dialog_button)
+		{
+			dojo.connect(dialog_button, "onclick", function()
+				{
+					g_popup_dialog.hide();
+					show_date_selection_dialog();
+				}
+			);
+		}
+		
+		return;
+	}
+	
+	function show_help_dialog()
+	{
+		show_dialog("BBBS Event Finder Help",
+			/* the following anchor tag is a hack to cause the Dojo dialog to load this with the top of the page in focus */
+			"<a name= \"top_of_dialog\" tabindex= \"0\"></a>" +
+			"<p>The BBBS Event Finder app helps big + little matches to locate events in the Central Texas area for their outings. In order to use this app, follow these steps:</p>" +
+			"<p><ol>" +
+			"<li>Optionally choose event filter critera. You can filter based on the following, using the appropriate submenu:" +
+			"<ul><li><b>Category</b> of the event</li><li><b>Cost</b> of the event</li></ul></li>" +
+			"<li>Select the day to search for events from the <b>Date</b> menu.</li>" +
+			"<li>Once the search completes, click on the <b>Results</b> menu to view the events which were found.</li>" +
+			"</ol></p><p>" +
+			"Any events which were found will also be mapped in the main window, relative to your current location. " +
+			"You can click on the event icons in the map view to get more information about the event. " +
+			"At any time you may also recenter the map view based on a location of your choosing by using the 'Find location' address search field " +
+			"in the lower left corner of the main map window.</p>" +
+			"<p><table><tr><th>Event Type Key</th></tr>" +
+			"<tr><td><img src= \"images/category_educational.png\" alt= \"Educational\" /></td><td> Educational event</td></tr>" +
+			"<tr><td><img src= \"images/category_entertainment.png\" alt= \"Entertainment\" /></td><td> Entertainment event</td></tr>" +
+			"<tr><td><img src= \"images/category_food.png\" alt= \"Food or Restaurant\" /></td><td> Food or Restaurant</td></tr>" +
+			"<tr><td><img src= \"images/category_outdoors.png\" alt= \"Outdoors\" /></td><td> Outdoors or Physical event</td></tr>" +
+			"<tr><td><img src= \"images/category_social.png\" alt= \"Social\" /></td><td> Social event</td></tr>" +
+			"</table></p>" +
+			"<hr /><p>Here is a short video tutorial on using the app:</p>" +
+			"<p><iframe width=\"" + get_dialog_inner_width() + "\" height=\"" + get_dialog_inner_width() + "\" src=\"//www.youtube.com/embed/reJ6Y7QIXTA\" frameborder=\"0\" allowfullscreen=\"true\"></iframe></p>" +
+			g_version_string.toString()
+		);
+		
+		return;
+	}
+	
+	function show_about_dialog()
+	{
+		show_dialog("About BBBS Event Finder",
+			"<p>The BBBS Event Finder app is designed to help big + little matches quickly and easily " +
+			"find fun, cost-effective things to do on their regular outings.</p><p>" +
+			"Developed as part of the <a href=\"http://hackforchange.org/projects/bbbs-event-finder/\" target= \"_blank\">Hack4Austin 2014</a> hack-a-thon.</p><p>" +
+			"<table border=\"0\" style=\"width:100%\">" +
+			"<tr><th>Special thanks to:</th></tr>" +
+			"<tr><td><p><center><a href=\"http://www.bigmentoring.org/\" target=\"_blank\"><img src=\"./images/bbbs_ctexas.jpg\" align=\"center\"></img></a></center></p></td></tr>" +
+			"<tr><td><p><center><a href=\"http://www.esri.com/\" target=\"_blank\"><img src=\"./images/esri_logo.jpg\" align=\"center\"></img></a></center></p></td></tr>" +
+			"<tr><td><p><center><a href=\"http://www.hostmysite.com/\" target=\"_blank\"><img src=\"./images/powered-by-hostmysite.png\" align=\"center\"></img></a></center></p></td></tr>" +
+			"<tr><td><p>&nbsp;</p></td></tr>" +
+			"<tr><th>Developed by:</th></tr>" +
+			"<tr><td><center>Westley Bonack</center></td></tr>" +
+			"<tr><td><center>Dan Bunker</center></td></tr>" +
+			"<tr><td><center>Veronica Fox</center></td></tr>" +
+			"<tr><td><center>Jose Manriquez</center></td></tr>" +
+			"<tr><td><center>Stefan Sinclair</center></td></tr>" +
+			"<tr><td><center>Pham Thang</center></td></tr>" +
+			"<tr><td><center>Jamie Tran</center></td></tr>" +
+			"</table></p>" +
+			g_version_string.toString()
+		);
+		
+		return;
+	}
+	
+	function show_submit_event_dialog()
+	{
+		show_dialog("Suggest an Event",
+			"<p>Do you know about an upcoming event that should be added? Let us know!</p>" +
+			"<p>Fill in as much information as you can about the event into the fields below:</p><hr />" +
+			"<form action=\"mailto:bbbsctxcalendar@gmail.com?subject=Suggested event for BBBS of Central TX\" method=\"POST\" enctype=\"text/plain\">" +
+			"<input type=\"hidden\" name=\"Comment\" value=\"Hello, I would like to suggest an event for BBBS of Central TX:\"></input>" +
+			"<p><b>Name:&nbsp;<b/><input type=\"text\" name=\"event_name\" size=\"45\" value=\"\"></input></p>" +
+			"<p><b>Description:<br /></b><textarea name=\"event_description\" rows=\"3\" cols=\"50\"></textarea></p>" +
+			"<p><b>Date / Time:&nbsp;<b/><input type=\"text\" name=\"event_date_time\" size=\"45\" value=\"\"></input></p>" +
+			"<p><b>Address:&nbsp;<b/><input type=\"text\" name=\"event_location\" size=\"45\" value=\"\"></input></p>" +
+			"<p><b>URL:&nbsp;</b><input type=\"text\" name=\"event_url\" size=\"45\" value=\"http://\"></input></p>" +
+			"<p><b>Category:&nbsp;</b><select name=\"event_category\">" +
+				"<option value=\"category_unknown\">-----</option>" +
+				"<option value=\"category_educational\">Educational</option>" +
+				"<option value=\"category_social\">Social</option>" +
+				"<option value=\"categpry_outdoors\">Outdoors</option>" +
+				"<option value=\"category_entertainment\">Entertainment</option>" +
+				"<option value=\"category_food\">Food</option>" +
+			"</select></p>" +
+			"<p><b>Cost:&nbsp;</b><select name=\"event_cost\">" +
+				"<option value=\"cost_unknown\">-----</option>" +
+				"<option value=\"cost_free\">Free</option>" +
+				"<option value=\"cost_$\">$ up to $5</option>" +
+				"<option value=\"cost_$$\">$$ up to $10</option>" +
+				"<option value=\"cost_$$$\">$$$ up to $20</option>" +
+				"<option value=\"cost_$$$$\">$$$$ over $20</option>" +
+			"</select></p>" +
+			"<p><input type=\"submit\" value=\"Send to BBBS of Central TX\"></input></p>" +
+			"</form>"
+		);
+		
+		return;
+	}
+	
+	function show_date_selection_dialog()
+	{
+		show_dialog("Select Date",
+			"<center><p>Choose a date on which to search for events:</p>" +
+			"<div id= \"date_selector\" data-dojo-type=\"dijit.Calendar\"></div></p></center>"
+		);
+		
+		dojo.connect(dijit.byId("date_selector"), "onChange",
+			function(value)
+			{
+				if (Boolean(begin_event_search(value)))
+				{
+					g_popup_dialog.hide();
+				}
+			}
+		);
+		
+		return;
+	}
+	
+	/* ---------- category menu */
+
+	function initialize_category_menu()
+	{
+		var category_menu= new DropDownMenu();
+		
+		/* add a menu entry for each event category that has been defined */
+		Object.keys(k_search_category).forEach(
+			function (key)
+			{
+				category_menu.addChild(
+					new CheckedMenuItem(
+						{
+							label: key,
+							checked: k_search_category[key],
+							onChange: function(checked)
+							{
+								k_search_category[key]= Boolean(checked);
+								update_events_display();
+								
+								return;
+							}
+						}
+					)
+				);
+			}
+		);
+		
+		category_menu.startup();
+		
+		return category_menu;
+	}
+	
+	function get_current_category_filters()
+	{
+		var result= [];
+		
+		Object.keys(k_search_category).forEach(
+			function (key)
+			{
+				if (Boolean(k_search_category[key]))
+				{
+					result.push(key);
+				}
+			}
+		);
+		
+		return result;
+	}
+	
+	/* ---------- cost menu */
+
+	function initialize_cost_menu()
+	{
+		var cost_menu= new DropDownMenu();
+		
+		/* add a menu entry for each cost range that has been defined */
+		for (var cost_index= 0; cost_index<k_search_cost_array.length; ++cost_index)
+		{
+			cost_menu.addChild(
+				new CheckedMenuItem(
+					{
+						absolute_index: cost_index,
+						label: k_cost_labels_array[cost_index],
+						checked: k_search_cost_array[cost_index],
+						onChange: function(checked)
+						{
+							/* check everything previous to this key, uncheck everything after */
+							var previous_item= true;
+							var menu_items= cost_menu.getChildren();
+							var test_label_index= this.absolute_index;
+							var test_label= k_cost_labels_array[test_label_index];
+							
+							k_search_cost_array[this.absolute_index]= Boolean(checked);
+							
+							for (var item_index= 0; item_index < menu_items.length; ++item_index)
+							{
+								if (menu_items[item_index].label == test_label)
+								{
+									previous_item= false;
+								}
+								else if (Boolean(previous_item))
+								{
+									menu_items[item_index].set('checked', true);
+									k_search_cost_array[item_index]= true;
+								}
+								else
+								{
+									menu_items[item_index].set('checked', false);
+									k_search_cost_array[item_index]= false;
+								}
+							}
+							
+							update_events_display();
+							
+							return;
+						}
+					}
+				)
+			);
+		}
+		
+		cost_menu.startup();
+		
+		return cost_menu;
+	}
+	
+	function get_current_cost_filters()
+	{
+		var cost_filters= ["", "$", "$$", "$$$", "$$$$"];
+		var result= [];
+		
+		for (var cost_index= 0; cost_index < k_search_cost_array.length; ++cost_index)
+		{
+			if (Boolean(k_search_cost_array[cost_index]))
+			{
+				result.push(cost_filters[cost_index]);
+			}
+		}
+		
+		return result;
+	}
+	
+	/* ---------- age menu */
+
+	function initialize_age_menu()
+	{
+		var age_menu= new DropDownMenu();
+		
+		/* add a menu entry for each age range that has been defined */
+		Object.keys(k_search_age).forEach(
+			function (key)
+			{
+				age_menu.addChild(
+					new CheckedMenuItem(
+						{
+							label: key,
+							checked: k_search_age[key],
+							onChange: function(checked)
+							{
+								/* uncheck everything but this item */
+								var menu_items= age_menu.getChildren();
+								
+								k_search_age[key]= Boolean(checked);
+								
+								for (var item_index= 0; item_index < menu_items.length; ++item_index)
+								{
+									if (menu_items[item_index].label != key)
+									{
+										menu_items[item_index].set('checked', false);
+										k_search_age[item_index]= false;
+									}
+								}
+								
+								update_events_display();
+								
+								return;
+							}
+						}
+					)
+				);
+			}
+		);
+		
+		age_menu.startup();
+		
+		return age_menu;
+	}
+	
+	/* ---------- date menu */
+
+	function initialize_date_menu()
+	{
+		g_popup_date_menu= new DropDownMenu();
+		
+		var calendar= new Calendar(
+			{
+				value: new Date(),
+				onChange: function(value)
+				{
+					if (Boolean(begin_event_search(value)))
+					{
+						dijit.popup.close(g_popup_date_menu);
+					}
+				}
+			},
+			"mycal"
+		);
+		
+		calendar.startup();
+		g_popup_date_menu.addChild(calendar);
+		g_popup_date_menu.startup();
+		
+		return g_popup_date_menu;
+	}
+	
+	function begin_event_search(value)
+	{
+		var search_started= false;
+		
+		if (0 == g_active_event_search_count)
+		{
+			var date_day_of_the_week= value.getDay(); /* day of the week, 0-6 */
+			var date_day= value.getDate(); /* day of the month, 1-31 */
+			var date_month= value.getMonth(); /* month, 0-11 */
+			var date_year= value.getFullYear(); /* year, 4 digits */
+			var proceed= confirm("Search for events on " +
+				k_week_days[date_day_of_the_week] + " " +
+				k_months[date_month] + " " + date_day + ", " + date_year + "?"
+			);
+			
+			if (Boolean(proceed))
+			{
+				g_last_event_search_date= value;
+				perform_events_search(value);
+				search_started= true;
+			}
+		}
+		
+		return search_started;
+	}
+	
+	/* ---------- event results menu */
+	
+	function initialize_event_results_menu()
+	{
+		var event_results_menu= new DropDownMenu();
+		
+		/* no items initially */
+		event_results_menu.addChild(
+			new MenuItem(
+				{
+        			label: "No events found yet",
+					onClick: function()
+					{
+						alert("Select a date from the 'Date' menu to search for events");
+					}
+				}
+			)
+		);
+		event_results_menu.startup();
+		
+		return event_results_menu;
+	}
+	
+	function generate_event_details_html(the_event)
+	{
+		var event_description= the_event.description.replace("\n", " <br />");
+		var description_html=
+			"<p><a href=\"" + the_event.url + "\"  target=\"_blank\">" + the_event.url + "</a></p>" +
+			"<p>" + event_description + "</p>";
+		
+		return description_html;
+	}
+	
+	function show_event_details(event_source_index, event_index, arcgis_location_data, reposition_map)
+	{
+		/* arcgis_location_data is passed in separately because an event can have multiple locations */
+		var event_source= g_event_source_array[event_source_index].m_events_array_filtered;
+		
+		if ((0 <= event_index) && (event_index < event_source.length))
+		{
+			var event_title= event_source[event_index].title;
+			var event_description= generate_event_details_html(event_source[event_index]);
+			var good_location= ((null != arcgis_location_data) || event_has_good_location_data(event_source[event_index]));
+			var single_line_address_string= (null != arcgis_location_data) ? arcgis_location_data.single_line_address : null;
+		
+			if (Boolean(good_location) && (!single_line_address_string || (0 == single_line_address_string.length)))
+			{
+				var arcgis_location_data= event_get_first_good_location_data(event_source[event_index]);
+	
+				if (null != arcgis_location_data)
+				{
+					single_line_address_string= arcgis_location_data.single_line_address;
+				}
+			}
+	
+			if (Boolean(reposition_map) && Boolean(good_location))
+			{
+				var zoom_level= g_bbbs_events_map.getZoom() > 0 ? g_bbbs_events_map.getZoom() : k_default_map_zoom_level;
+		
+				if (null != arcgis_location_data)
+				{
+					var location_point= Boolean(k_use_web_mercator_projection) ?
+						new Point(arcgis_location_data.x, arcgis_location_data.y, g_bbbs_events_map.spatialReference/*new SpatialReference(arcgis_location_data.spatial_reference)*/) :
+						new Point(arcgis_location_data.display_x, arcgis_location_data.display_y);
+		
+					zoom_to_event_location(location_point, zoom_level);
+				}
+				else
+				{
+					for (var location_index= 0; location_index < event_source[event_index].arcgis_locations.length; ++location_index)
+					{
+						/* zoom to the first 'good' location attached to the event */
+						if ('undefined' !== (typeof event_source[event_index].arcgis_locations[location_index].score) &&
+							(k_arcgis_geocode_score_acceptance_threshold <= event_source[event_index].arcgis_locations[i].score))
+						{
+							var location_point= Boolean(k_use_web_mercator_projection) ?
+								new Point(
+									event_source[event_index].arcgis_locations[location_index].x,
+									event_source[event_index].arcgis_locations[location_index].y,
+									/* workaround for the 'Geometry cannot be converted to spatial reference of the map' bug */
+									g_bbbs_events_map.spatialReference/*new SpatialReference(event_source[event_index].arcgis_locations[location_index].spatial_reference)*/
+								) :
+								new Point(
+									event_source[event_index].arcgis_locations[location_index].display_x,
+									event_source[event_index].arcgis_locations[location_index].display_y
+								);
+							
+							zoom_to_event_location(location_point, zoom_level);
+							break;
+						}
+					}
+				}
+			}
+		
+			if (null != single_line_address_string && (0 < single_line_address_string.length))
+			{
+				event_description+= ("<p>Location: " + single_line_address_string + "</p>");
+			}
+		
+			show_dialog(event_title, event_description);
+		}
+		else
+		{
+			report_error("Unable to show event details: invalid event index: " + event_index);
+		}
+		
+		return;
+	}
+	
+	function rebuild_event_results_menu()
+	{
+		if (null != g_event_results_menu)
+		{
+			/* remove anything already in the results menu */
+			var menu_items= g_event_results_menu.getChildren();
+		
+			for (var item_index= menu_items.length-1; 0 <= item_index; --item_index)
+			{
+				g_event_results_menu.removeChild(menu_items[item_index]);
+			}
+		
+			if (g_last_event_search_date != null)
+			{
+				var date_day_of_the_week= g_last_event_search_date.getDay(); /* day of the week, 0-6 */
+				var date_day= g_last_event_search_date.getDate(); /* day of the month, 1-31 */
+				var date_month= g_last_event_search_date.getMonth(); /* month, 0-11 */
+				var date_year= g_last_event_search_date.getFullYear(); /* year, 4 digits */
+		
+				g_event_results_menu.addChild(new MenuItem({ label: "Results for " + k_week_days[date_day_of_the_week] + " " + k_months[date_month] + " " + date_day + ", " + date_year }));
+				g_event_results_menu.addChild(new MenuSeparator());
+			}
+			
+			/* rebuild each event source results menu */
+			for (var event_source_index= 0; event_source_index < g_event_source_array.length; ++event_source_index)
+			{
+				var event_source= g_event_source_array[event_source_index];
+		
+				/* remove existing items */
+				if (g_event_source_array[event_source_index].m_menu === null)
+				{
+					g_event_source_array[event_source_index].m_menu= new Menu({ id: g_event_source_array[event_source_index].m_name + "_results" });
+					g_event_source_array[event_source_index].m_menu.startup();
+				}
+				else
+				{
+					menu_items= g_event_source_array[event_source_index].m_menu.getChildren();
+					for (var item_index= menu_items.length-1; 0 <= item_index; --item_index)
+					{
+						g_event_source_array[event_source_index].m_menu.removeChild(menu_items[item_index]);
+					}
+				}
+		
+				if ((event_source.m_events_array_filtered instanceof Array) && (event_source.m_events_array_filtered.length > 0))
+				{
+					/* populate event source results menu */
+					for (var event_index= 0; event_index < g_event_source_array[event_source_index].m_events_array_filtered.length; ++event_index)
+					{
+						var event_label= event_has_good_location_data(
+							g_event_source_array[event_source_index].m_events_array_filtered[event_index]) ?
+								"* " + g_event_source_array[event_source_index].m_events_array_filtered[event_index].title :
+								g_event_source_array[event_source_index].m_events_array_filtered[event_index].title;
+						
+						g_event_source_array[event_source_index].m_menu.addChild(
+							new MenuItem(
+								{
+									m_event_source_index: event_source_index,
+									m_bbbs_event_index: event_index,
+									label: event_label,
+									onClick: function()
+									{
+										var event_source_array= g_event_source_array[this.m_event_source_index].m_events_array_filtered;
+										var arcgis_location_data= event_get_first_good_location_data(event_source_array[this.m_bbbs_event_index]);
+										
+										show_event_details(this.m_event_source_index, this.m_bbbs_event_index, arcgis_location_data, event_has_good_location_data(event_source_array[this.m_bbbs_event_index]));
+									}
+								}
+							)
+						);
+					}
+				}
+				else
+				{
+					g_event_source_array[event_source_index].m_menu.addChild(
+						new MenuItem(
+							{
+								label: "No events found",
+								onClick: function()
+								{
+									alert("No events were found from this source for the selected date. Check the other results menus, adjust your event filters, or you can also try another date.");
+								}
+							}
+						)
+					);
+				}
+		
+				/* add event category popup menu to the main results menu */
+				var popup_menu_id= "popup_" + event_source_index;
+		
+				if (g_event_source_array[event_source_index].m_popup_menu === null)
+				{
+					g_event_source_array[event_source_index].m_popup_menu= new PopupMenuItem(
+						{
+							id: popup_menu_id,
+							label: g_event_source_array[event_source_index].m_name,
+							iconClass: g_event_source_array[event_source_index].m_icon_class,
+							popup: g_event_source_array[event_source_index].m_menu
+						}
+					);
+				}
+				dijit.byId(popup_menu_id).set("label", g_event_source_array[event_source_index].m_name + " (" + g_event_source_array[event_source_index].m_events_array_filtered.length + ")");
+				g_event_results_menu.addChild(g_event_source_array[event_source_index].m_popup_menu);
+			}
+		}
+		
+		return;
+	}
+	
+	/* ---------- menu bar */
+
+	function initialize_menu_bar()
+	{
+		var menu_bar= new MenuBar({});
+		var help_menu= initialize_help_menu();
+		var category_menu= initialize_category_menu();
+		var cost_menu= initialize_cost_menu();
+		/*var age_menu= initialize_age_menu();*/
+		
+		g_popup_date_menu= initialize_date_menu();
+		g_event_results_menu= initialize_event_results_menu();
+		
+		menu_bar.addChild(new PopupMenuBarItem({label: "Help", popup: help_menu }));
+		menu_bar.addChild(new PopupMenuBarItem({label: "Category", popup: category_menu }));
+		menu_bar.addChild(new PopupMenuBarItem({label: "Cost", popup: cost_menu }));
+		/*menu_bar.addChild(new PopupMenuBarItem({label: "Age", popup: age_menu }));*/
+		menu_bar.addChild(new PopupMenuBarItem({label: "Date", popup: g_popup_date_menu }));
+		menu_bar.addChild(new PopupMenuBarItem({label: "Results", popup: g_event_results_menu }));
+		
+		menu_bar.placeAt("page_header");
+		menu_bar.startup();
+		
+		return;
+	}
+
+	/* ---------- status footer */
+	
+	function set_status_text(status_text)
+	{
+		console.log(status_text);
+		html.set(dom.byId("status_message"), status_text);
+		
+		return;
+	}
+
+	/* ---------- mapping code */
+
+	function initialize_arcgis_map()
+	{
+		if (Boolean(k_use_web_mercator_projection))
+		{
+			g_bbbs_events_map= new Map("map_content",
+				{
+					basemap: "streets",
+					/*center: [-93.5, 41.431],*/
+					/* set to Texas, see: https://developers.arcgis.com/flex/sample-code/extent-wizard.htm */
+					extent: new Extent(-12990231, 2766798, -9233198, 4606179, new SpatialReference(k_web_mercator_projection_spatial_reference_wkid)),
+					zoom: k_initial_map_zoom_level,
+					autoResize: true
+				}
+			);
+		}
+		else
+		{
+			g_bbbs_events_map= new Map("map_content",
+				{
+					basemap: "streets",
+					center: [-93.5, 41.431],
+					zoom: k_initial_map_zoom_level,
+					autoResize: true
+				}
+			);
+		}
+		g_bbbs_events_map.on("load", zoom_to_user_location);
+		
+		g_map_graphics_layer= new GraphicsLayer(
+			{
+				id: "graphics_layer"
+			}
+		);
+		g_bbbs_events_map.addLayer(g_map_graphics_layer);
+		g_map_graphics_layer.on("click",
+			function(the_event)
+			{
+				var event_source_index= the_event.graphic.attributes.event_source_id;
+				var event_index= the_event.graphic.attributes.event_id;
+				
+				if ((0 <= event_source_index) && (0 <= event_index))
+				{
+					var event_source_array= g_event_source_array[event_source_index].m_events_array_filtered;
+					var location_index= the_event.graphic.attributes.location_id;
+					var arcgis_location_data= (0 <= location_index) ? event_source_array[event_index].arcgis_locations[location_index] : null;
+					
+					show_event_details(event_source_index, the_event.graphic.attributes.event_id, arcgis_location_data, true);
+				}
+				
+				return;
+            }
+		);
+		
+		g_geocoder= new Geocoder(
+			{
+				map: g_bbbs_events_map,
+				arcgisGeocoder: { placeholder: "Find location" },
+				autoComplete: true
+			},
+			dom.byId("map_search")
+		);
+		g_geocoder.on("select", show_geocoder_search_result);
+		g_geocoder.startup();
+		
+		return;
+	}
+
+	function orientation_changed()
+	{
+		if (g_bbbs_events_map)
+		{
+			g_bbbs_events_map.reposition();
+			g_bbbs_events_map.resize();
+		}
+		
+		return;
+	}
+	
+	function zoom_to_location_first_time(location)
+	{
+		/* perform an initial zoom in from wide to more narrow focus */
+		zoom_to_location(location, k_default_map_zoom_level);
+		show_welcome_dialog();
+		
+		return;
+	}
+
+	function zoom_to_user_location()
+	{
+		if (navigator.geolocation)
+		{
+			set_status_text("Acquiring your current location...");
+			navigator.geolocation.getCurrentPosition(zoom_to_location_first_time, location_error);
+		}
+		else
+		{
+			alert("This browser does not support Geolocation. Visit http://caniuse.com to see browser support for the Geolocation API.");
+		}
+		
+		return;
+	}
+
+	function zoom_to_location(latlong, zoom_level)
+	{
+		var point= new Point(latlong.coords.longitude, latlong.coords.latitude);
+		
+		set_user_location_graphic(point);
+		zoom_to_event_location(point, zoom_level);
+		set_status_text("");
+		
+		return;
+	}
+	
+	function location_error(error)
+	{
+		/*if (navigator.geolocation)
+		{
+			navigator.geolocation.clearWatch(g_watch_id);
+		}*/
+		switch (error.code)
+		{
+			case error.PERMISSION_DENIED:
+				report_error("Location not provided");
+				break;
+			case error.POSITION_UNAVAILABLE:
+				report_error("Current location unavailable");
+				break;
+			case error.TIMEOUT:
+				report_error("Timeout getting location");
+				break;
+			default:
+				report_error("Unknown error getting location");
+				break;
+		}
+		
+		show_welcome_dialog();
+		
+		return;
+	}
+	
+	function zoom_to_event_location(target_point, zoom_level)
+	{
+		set_status_text("Centering on event location...");
+		g_bbbs_events_map.centerAndZoom(target_point, zoom_level);
+		
+		return;
+	}
+
+	function set_user_location_graphic(point)
+	{
+		var symbol= new SimpleMarkerSymbol(
+			SimpleMarkerSymbol.STYLE_CIRCLE,
+			12,
+			new SimpleLineSymbol(
+				SimpleLineSymbol.STYLE_SOLID,
+				new Color([210, 105, 30, 0.5]),
+				8),
+			new Color([210, 105, 30, 0.9])
+		);
+		var attribute= { "event_source_id": -1, "event_id": -1, "location_id": -1 };
+		
+		g_user_location_graphic= new Graphic(point, symbol, attribute);
+		g_map_graphics_layer.add(g_user_location_graphic);
+		
+		return;
+	}
+
+	function show_geocoder_search_result(search_result)
+	{
+		g_bbbs_events_map.graphics.clear();
+		
+		var point= search_result.result.feature.geometry;
+		var symbol= new SimpleMarkerSymbol();
+		
+		symbol.setStyle("square");
+		symbol.setColor(new Color([255, 0, 0, 0.5]));
+		
+		var attribute= { "event_source_id": -1, "event_id": -1, "location_id": -1 };
+		var search_result_graphic= new Graphic(point, symbol, attribute);
+		
+		g_map_graphics_layer.add(search_result_graphic);
+		
+		g_bbbs_events_map.infoWindow.setTitle("Search Result");
+		g_bbbs_events_map.infoWindow.setContent(search_result.result.name);
+		g_bbbs_events_map.infoWindow.show(search_result.result.feature.geometry);
+		
+		return;
+	}
+	
+	function rebuild_map_graphics()
+	{
+		var unfiltered_event_count= get_unfiltered_event_results_count();
+		var filtered_event_count= get_filtered_event_results_count();
+		var delta= unfiltered_event_count - filtered_event_count;
+		var mapped_event_count= 0;
+		
+		/* reset the map graphics */
+		g_map_graphics_layer.clear();
+		
+		if (null != g_user_location_graphic)
+		{
+			g_map_graphics_layer.add(g_user_location_graphic);
+		}
+		
+		for (var event_source_index= 0; event_source_index < g_event_source_array.length; ++event_source_index)
+		{
+			var event_source_array= g_event_source_array[event_source_index].m_events_array_filtered;
+		
+			for (var event_index= 0; event_index < event_source_array.length; ++event_index)
+			{
+				/* if geocoding score is at or above our threshold, use this data */
+				if (event_has_good_location_data(event_source_array[event_index]))
+				{
+					for (var location_index= 0; location_index < event_source_array[event_index].arcgis_locations.length; ++location_index)
+					{
+						/* add a point to the map for each 'good' location attached to the event */
+						if ((typeof event_source_array[event_index].arcgis_locations[location_index].score !== 'undefined') &&
+							(k_arcgis_geocode_score_acceptance_threshold <= event_source_array[event_index].arcgis_locations[location_index].score))
+						{
+							/* add a point to the map for this location */
+							var point= Boolean(k_use_web_mercator_projection) ?
+								new Point(
+									event_source_array[event_index].arcgis_locations[location_index].x,
+									event_source_array[event_index].arcgis_locations[location_index].y,
+									/* workaround for the 'Geometry cannot be converted to spatial reference of the map' bug */
+									g_bbbs_events_map.spatialReference/*new SpatialReference(event_source_array[event_index].arcgis_locations[location_index].spatial_reference)*/
+								) :
+								new Point(
+									event_source_array[event_index].arcgis_locations[location_index].display_x,
+									event_source_array[event_index].arcgis_locations[location_index].display_y
+								);
+							var symbol= null;
+		
+							if ((typeof event_source_array[event_index].category !== 'undefined'))
+							{
+								var category_text= event_source_array[event_index].category.toString().toLowerCase();
+								
+								if (0 < category_text.length)
+								{
+									var img_url= "./images/category_" + category_text + ".png";
+									
+									symbol= new PictureMarkerSymbol(img_url, 24, 24);
+								}
+							}
+							
+							if (null == symbol)
+							{
+								symbol= new SimpleMarkerSymbol(
+									SimpleMarkerSymbol.STYLE_SQUARE,
+									24,
+									new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+									new Color([255,0,0]), 1),
+									new Color([0,255,0,0.25])
+								);
+							}
+					
+							var attribute= { "event_source_id": event_source_index, "event_id": event_index, "location_id": location_index };
+							var map_graphic= new Graphic(point, symbol, attribute);
+					
+							g_map_graphics_layer.add(map_graphic);
+						}
+					}
+					
+					mapped_event_count+= 1;
+				}
+				/* else, skip this geocoding data */
+			}
+		}
+		
+		if (0 < delta)
+		{
+			set_status_text("Mapped " + mapped_event_count + " of " + filtered_event_count + " events (" + delta + " filtered out)");
+		}
+		else
+		{
+			set_status_text("Mapped " + mapped_event_count + " of " + filtered_event_count + " events");
+		}
+		
+		return;
+
+	}
+	
+	/* ---------- event code */
+	
+	function get_unfiltered_event_results_count()
+	{
+		var result= 0;
+		
+		for (var event_source_index= 0; event_source_index < g_event_source_array.length; ++event_source_index)
+		{
+			result+= g_event_source_array[event_source_index].m_events_array_unfiltered.length;
+		}
+		
+		return result;
+	}
+	
+	function get_filtered_event_results_count()
+	{
+		var result= 0;
+		
+		for (var event_source_index= 0; event_source_index < g_event_source_array.length; ++event_source_index)
+		{
+			result+= g_event_source_array[event_source_index].m_events_array_filtered.length;
+		}
+		
+		return result;
+	}
+	
+	function perform_events_search(search_date)
+	{
+		load_events(search_date, search_date);
+		
+		return;
+	}
+	
+	function valid_event_filter(event_data)
+	{
+		/* does event title and description contain any alphabetic characters? */
+		return (event_data.title.match(/[a-z]/i) && event_data.description.match(/[a-z]/i)) ? true : false;
+	}
+	
+	function remove_duplicate_events(event_array)
+	{
+		var array_length= event_array.length;
+		
+		for (var i= array_length-1; i >= 0; i--)
+		{
+			for (var j= 0; j < array_length-1; j++)
+			{
+				if (event_array[i].title === event_array[j].title)
+				{
+					event_array.splice(j, 1);
+					--array_length;
+					++i;
+					break;
+				}
+			}
+		}
+		
+		return event_array;
+	}
+	
+	/*
+	add event results from an HTTP query
+	*/
+	function add_event_results(event_source, json_data)
+	{
+		if ((null != json_data) &&
+			(typeof json_data.success !== 'undefined') &&
+			Boolean(json_data.success) &&
+			(json_data.results instanceof Array))
+		{
+			if (0 < json_data.results.length)
+			{
+				event_source.m_events_array_unfiltered= event_source.m_events_array_unfiltered.concat(json_data.results.filter(valid_event_filter));
+				update_events_display();
+			}
+			else
+			{
+				console.log("add_event_results(): no json_data.results[]!");
+			}
+		}
+		else
+		{
+			console.log("add_event_results(): no usable json_data retrieved! " + json_data);
+		}
+		
+		if (0 == g_active_event_search_count)
+		{
+			alert("Found " + get_filtered_event_results_count() + " events!\nClick the 'Results' menu to see a full listing.\nEvents which were mapped are prefixed with an asterisk (*).");
+		}
+		
+		return;
+	}
+	
+	function load_events_from_source(event_source, start_date, end_date)
+	{
+		var url= event_source.get_load_url(start_date, end_date);
+		
+		/* clear any previously retrieved results */
+		event_source.m_events_array_unfiltered= [];
+		event_source.m_events_array_filtered= [];
+
+		request.get(url, { handleAs: "json"}).then(
+			function(json_data)
+			{
+				g_active_event_search_count-= 1;
+				console.log("Events request completed successfully for " + event_source.m_name);
+				add_event_results(event_source, json_data);
+				
+				return;
+			},
+			function(error_data)
+			{
+				set_status_text("There was an error retrieving events from the server for " + event_source.m_name);
+				console.log("Failed to load events from calendar " + event_source.m_name + "! data= " + dojo.toJson(error_data));
+				g_active_event_search_count-= 1;
+				add_event_results(event_source, null);
+				
+				return;
+			}
+		);
+	
+		return;
+	}
+	
+	/*
+	asynchronously loads available events for the given date range using AJAX - does not perform any additional filtering
+	*/
+	function load_events(start_date, end_date)
+	{
+		if (0 == g_active_event_search_count)
+		{
+			set_status_text("Loading events...");
+			/* +1 for each event source query; search is considered active until all querries complete */
+			g_active_event_search_count= g_event_source_array.length;
+			for (var event_source_index= 0; event_source_index < g_event_source_array.length; ++event_source_index)
+			{
+				load_events_from_source(g_event_source_array[event_source_index], start_date, end_date);
+			}
+		}
+		
+		return;
+	}
+	
+	/*
+	does this event have at least one mappable location?
+	*/
+	function event_has_good_location_data(test_event)
+	{
+		var valid_location_data= ((typeof test_event.arcgis_locations !== 'undefined') &&
+			(test_event.arcgis_locations instanceof Array) &&
+			(0 < test_event.arcgis_locations.length)) ? true : false;
+		
+		if (Boolean(valid_location_data))
+		{
+			var good_location_count= 0;
+			
+			for (var location_index= 0; location_index < test_event.arcgis_locations.length && Boolean(valid_location_data); ++location_index)
+			{
+				if ((typeof test_event.arcgis_locations[location_index].score !== 'undefined') &&
+					(k_arcgis_geocode_score_acceptance_threshold <= test_event.arcgis_locations[location_index].score))
+				{
+					++good_location_count;
+					break;
+				}
+			}
+			
+			valid_location_data= Boolean(0 < good_location_count);
+		}
+		
+		return valid_location_data;
+	}
+	
+	/*
+	returns first good arcgis_locations[] element for the input event
+	*/
+	function event_get_first_good_location_data(test_event)
+	{
+		var valid_location_data= ((typeof test_event.arcgis_locations !== 'undefined') &&
+			(test_event.arcgis_locations instanceof Array) &&
+			(0 < test_event.arcgis_locations.length)) ? true : false;
+		var arcgis_data= null;
+		
+		if (Boolean(valid_location_data))
+		{
+			for (var location_index= 0; location_index < test_event.arcgis_locations.length && Boolean(valid_location_data); ++location_index)
+			{
+				if ((typeof test_event.arcgis_locations[location_index].score !== 'undefined') &&
+					(k_arcgis_geocode_score_acceptance_threshold <= test_event.arcgis_locations[location_index].score))
+				{
+					arcgis_data= test_event.arcgis_locations[location_index];
+					break;
+				}
+			}
+		}
+		
+		return arcgis_data;
+	}
+	
+	/*
+	filter events by category
+	in_events: array of BBBS event objects
+	in_categories: array of categories (strings)
+	returns BBBS events from in_events whose category matches one of the entries in in_categories, or null
+	*/
+	function filter_by_category(in_events, categories)
+	{
+		var result= in_events.slice(0);
+		
+		for (var result_index= 0; result_index < result.length; ++result_index)
+		{
+			var remove_event= true;
+			
+			if (null != result[result_index].category)
+			{
+				var test_category= result[result_index].category.toString().toUpperCase();
+				
+				if (test_category.length > 0)
+				{
+					for (var category_index= 0; category_index < categories.length; ++category_index)
+					{
+						if (0 == test_category.localeCompare(categories[category_index].toUpperCase()))
+						{
+							remove_event= false;
+							break;
+						}
+					}
+				}
+				else
+				{
+					remove_event= false;
+				}
+			}
+			else
+			{
+				remove_event= false;
+			}
+			
+			if (Boolean(remove_event))
+			{
+				result.splice(result_index, 1);
+				--result_index;
+			}
+		}
+		
+		return result;
+	}
+	
+	/*
+	filter events by cost
+	in_events: array of BBBS event objects
+	in_costs: array of costs (strings, expected to look like '$$$$', '$$$', '$$' or '$')
+	returns BBBS events from in_events whose cost matches one of the entries in in_costs, or null
+	*/
+	function filter_by_cost(in_events, costs)
+	{
+		var result= in_events.slice(0);
+		
+		if (0 < costs.length)
+		{
+			for (var result_index= 0; result_index < result.length; ++result_index)
+			{
+				var remove_event= true;
+				
+				if (null != result[result_index].pricerange)
+				{
+					var test_cost= result[result_index].pricerange.toString();
+					
+					for (var cost_index= 0; cost_index < costs.length; ++cost_index)
+					{
+						if (0 == test_cost.localeCompare(costs[cost_index]))
+						{
+							remove_event= false;
+							break;
+						}
+					}
+				}
+				else
+				{
+					remove_event= false;
+				}
+				
+				if (Boolean(remove_event))
+				{
+					result.splice(result_index, 1);
+					--result_index;
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	function update_filtered_event_lists()
+	{
+		var filter_categories= get_current_category_filters();
+		var filter_costs= get_current_cost_filters();
+		
+		for (var event_source_index= 0; event_source_index < g_event_source_array.length; ++event_source_index)
+		{
+			g_event_source_array[event_source_index].m_events_array_filtered= filter_by_category(g_event_source_array[event_source_index].m_events_array_unfiltered, filter_categories);
+			g_event_source_array[event_source_index].m_events_array_filtered= filter_by_cost(g_event_source_array[event_source_index].m_events_array_filtered, filter_costs);
+		}
+		
+		return;
+	}
+	
+	/* applies filtering to the full results set, and then updates menu + map displays */
+	function update_events_display()
+	{
+		update_filtered_event_lists();
+		rebuild_event_results_menu();
+		rebuild_map_graphics();
+		
+		return;
+	}
+
+	/* ---------- main */
+
+	initialize_menu_bar();
+	initialize_arcgis_map();
+
+	return;
+});
+-->
+</script>
+</head>
+<body class= "claro" onorientationchange= "orientation_changed()">
+	<div id= "wrapper">
+		<header id= "page_header"></header>
+		<div id= "map_content"></div>
+		<div id= "map_search"></div>
+	</div>
+	<footer id= "status_message"></footer>
+</body>
+</html>
