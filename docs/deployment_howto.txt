@@ -10,6 +10,6 @@ Deployment to inmotionhosting.com shared hosting site:
    a) remove private info
 4) Modify 'universal.php':
    a) set LOCAL_DEVELOPMENT_DEPLOYMENT to FALSE
-5) Change permisions on python files to '755' (add execute permissions) as needed
+5) Change permisions on PHP files to '755' (add execute permissions) as needed
 6) Modify index.html
    a) set 'k_bbbs_event_load_url' as appropriate for deployment environment
